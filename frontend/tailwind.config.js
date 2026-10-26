@@ -1,13 +1,33 @@
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./pages/**/*.{js,jsx}', './components/**/*.{js,jsx}'],
-  darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['JetBrains Mono', 'SF Mono', 'Fira Code', 'monospace'],
+      },
+      fontSize: {
+        '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+      },
       colors: {
-        cyber: { 900: '#0a0e1a', 800: '#0d1224', 700: '#111827', 600: '#1a2236' },
-        accent: { green: '#00ff9d', blue: '#00b4ff', red: '#ff4d6d', yellow: '#ffd700' }
-      }
-    }
+        surface: {
+          0: '#09090b',
+          1: '#111113',
+          2: '#18181b',
+          3: '#1f1f23',
+        },
+      },
+      borderRadius: {
+        '2xl': '1rem',
+        '3xl': '1.25rem',
+      },
+      boxShadow: {
+        card: '0 1px 2px 0 rgba(0,0,0,0.4)',
+        'card-hover': '0 4px 12px 0 rgba(0,0,0,0.5)',
+        glow: '0 0 20px rgba(16, 185, 129, 0.08)',
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 }

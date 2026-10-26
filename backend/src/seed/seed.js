@@ -81,12 +81,12 @@ const INITIAL_NOTICE_V1 = {
 async function runSeed() {
   const mongoose = require('mongoose');
   const Notice   = require('../models/Notice');
+  const { connectDB, disconnectDB } = require('../config/db');
 
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/consentguard';
   const alreadyConnected = mongoose.connection.readyState === 1;
 
   if (!alreadyConnected) {
-    await mongoose.connect(uri);
+    await connectDB();
     console.log('[Seed] Connected to MongoDB.');
   }
 
@@ -99,7 +99,7 @@ async function runSeed() {
   }
 
   if (!alreadyConnected) {
-    await mongoose.disconnect();
+    await disconnectDB();
     console.log('[Seed] Disconnected from MongoDB.');
   }
 }

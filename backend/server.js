@@ -60,8 +60,8 @@ async function startServer() {
   }, 10_000);
 
   // 5. Start listening
-  const server = app.listen(PORT, () => {
-    console.log(`[Server] ConsentGuard backend listening on port ${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Server] ConsentGuard backend listening on port ${PORT} (0.0.0.0)`);
   });
 
   return server;

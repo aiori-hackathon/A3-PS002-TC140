@@ -9,6 +9,10 @@
     "frontend:dev": "npm run dev --prefix frontend",
     "frontend:build": "npm run build --prefix frontend",
     "frontend:start": "npm start --prefix frontend",
+    "frontend:preview": "npm run preview --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend",
+    "start": "npm run start --prefix frontend",
     "seed": "npm run seed --prefix backend"
   },
   "keywords": [

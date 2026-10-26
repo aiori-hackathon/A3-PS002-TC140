@@ -2,27 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-root: #09090b;
+  --bg-card: #111113;
+  --bg-elevated: #18181b;
+  --border-subtle: #27272a;
+  --border-active: #3f3f46;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+  --brand: #10b981;
+  --brand-dim: #064e3b;
+  --danger: #ef4444;
+  --danger-dim: #450a0a;
+  --warning: #f59e0b;
+  --warning-dim: #451a03;
+  --info: #3b82f6;
+  --info-dim: #172554;
+}
+
+* { box-sizing: border-box; }
+
 body {
-  @apply bg-gray-950 text-gray-100;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-root);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #111827;
-}
-::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+code, .font-mono, pre {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
 }
 
-/* Monospace for technical content */
-.font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+/* Selection */
+::selection { background: rgba(16, 185, 129, 0.2); color: #a7f3d0; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideDown { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+@keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.15); } 50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+.animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+.animate-slideDown { animation: slideDown 0.35s ease-out; }
+.animate-pulseGlow { animation: pulseGlow 2s infinite; }
+.animate-blink { animation: blink 1.2s infinite; }
+
+/* Toast notification slide */
+@keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.animate-toastIn { animation: toastIn 0.3s ease-out; }

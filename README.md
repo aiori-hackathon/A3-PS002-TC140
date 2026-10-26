@@ -89,12 +89,17 @@ npm start
 
 ### 2. Start Frontend Dashboard
 ```bash
-# From repository root:
+# Development Mode (Hot Reloading + Mobile Network Access):
 npm run frontend:dev
-# OR:
-cd frontend
-npm run dev
-# Dashboard available at http://localhost:3000
+# OR from frontend folder:
+cd frontend && npm run dev
+
+# Production Build & Preview:
+npm run build
+npm run preview
+# Dashboard is available on:
+# - Desktop: http://localhost:3000
+# - Mobile Phone (Same Wi-Fi): http://<YOUR_LOCAL_IP>:3000 (e.g. http://10.209.164.119:3000)
 ```
 
 ### 3. Run All 20 Automated Tests
@@ -102,9 +107,6 @@ npm run dev
 # From repository root:
 npm test
 # Runs all 20 lifecycle tests (T01-T20) in ~1 second
-```
-# Uses mongodb-memory-server (no external MongoDB needed)
-# Tests run sequentially (--runInBand)
 ```
 
 ---
