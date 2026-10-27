@@ -146,7 +146,7 @@ export default function Dashboard() {
               />
               <span className="text-zinc-400">Backend API</span>
               <span className={`ml-auto font-mono text-[11px] ${backendUp ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {backendUp ? 'Online (4000)' : 'Offline'}
+                {backendUp ? 'Online' : 'Offline'}
               </span>
             </div>
           </div>

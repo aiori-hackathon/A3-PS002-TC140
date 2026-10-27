@@ -5,31 +5,64 @@ const mongoose = require('mongoose');
 let memoryServer = null;
 
 /**
- * Normalizes MongoDB URI:
- * 1. Appends database name ('consentguard') if path is empty or just '/'
- * 2. Preserves query parameters like retryWrites=true&w=majority
+ * Robustly sanitizes and cleans MongoDB connection strings:
+ * 1. Strips all accidental whitespace, newlines, and carriage returns (common during copy-paste in Render UI)
+ * 2. Fixes accidental duplicated host appends (e.g. URI ending with duplicated @cluster0...)
+ * 3. Safely auto-encodes special characters in the password (e.g. #, @, :, %) to prevent "Password contains unescaped characters"
+ * 4. Ensures the database name ('consentguard') and standard parameters are present.
  */
-function normalizeMongoUri(uri) {
-  if (!uri) return uri;
-  try {
-    // If it's a mongodb+srv:// or mongodb:// URI
-    const urlParts = uri.split('?');
-    let base = urlParts[0];
-    const query = urlParts[1] ? `?${urlParts[1]}` : '?retryWrites=true&w=majority';
+function cleanMongoUri(rawUri) {
+  if (!rawUri) return rawUri;
 
-    // Check if base has a database name after the host
-    // Matches mongodb(+srv)://[credentials@]host[:port][/][dbname]
-    const match = base.match(/^mongodb(?:\+srv)?:\/\/[^/]+(\/.*)?$/);
-    if (match) {
-      const path = match[1] || '';
-      if (!path || path === '/') {
-        base = base.replace(/\/+$/, '') + '/consentguard';
-      }
-    }
-    return base + (query.startsWith('?') ? query : `?${query}`);
-  } catch (err) {
-    return uri;
+  // 1. Remove all newlines, carriage returns, and leading/trailing whitespace
+  let uri = String(rawUri).trim().replace(/[\r\n\t ]+/g, '');
+
+  const protoMatch = uri.match(/^mongodb(?:\+srv)?:\/\//);
+  if (!protoMatch) return uri;
+
+  const protocol = protoMatch[0];
+  let rest = uri.slice(protocol.length);
+
+  // 2. Detect and fix duplicated '@' (caused by copy-pasting URL twice)
+  const atParts = rest.split('@');
+  if (atParts.length > 2) {
+    // If multiple '@' signs exist, keep the user:pass from part 0 and host from part 1
+    const userPass = atParts[0];
+    const host = atParts[1].split('/')[0].split('?')[0];
+    rest = `${userPass}@${host}/consentguard?retryWrites=true&w=majority`;
+    uri = protocol + rest;
   }
+
+  // 3. Ensure database name (/consentguard)
+  const querySplit = uri.split('?');
+  let base = querySplit[0];
+  const query = querySplit[1] ? `?${querySplit[1]}` : '?retryWrites=true&w=majority';
+
+  const hostMatch = base.match(/^mongodb(?:\+srv)?:\/\/[^/]+(\/.*)?$/);
+  if (hostMatch) {
+    const path = hostMatch[1] || '';
+    if (!path || path === '/') {
+      base = base.replace(/\/+$/, '') + '/consentguard';
+    }
+  }
+  uri = base + (query.startsWith('?') ? query : `?${query}`);
+
+  // 4. Safely auto-encode password characters if unescaped
+  try {
+    const credMatch = uri.match(/^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@(.+)$/);
+    if (credMatch) {
+      const [, proto, user, pass, hostAndPath] = credMatch;
+      // Decode first in case already partially encoded, then re-encode safely
+      let decodedPass = pass;
+      try {
+        decodedPass = decodeURIComponent(pass);
+      } catch (_) {}
+      const encodedPass = encodeURIComponent(decodedPass);
+      uri = `${proto}${user}:${encodedPass}@${hostAndPath}`;
+    }
+  } catch (_) {}
+
+  return uri;
 }
 
 /**
@@ -44,42 +77,37 @@ function maskUri(uri) {
  * Connect to MongoDB.
  * 
  * Logic:
- * 1. If MONGODB_URI is provided, normalize database name to 'consentguard'.
- * 2. Connect with 8s timeout. If auth fails with lowercase password, auto-try capitalized password.
- * 3. If remote connection succeeds, log and return.
- * 4. If remote connection fails or local daemon unavailable, gracefully fall back to
- *    MongoMemoryServer so the app NEVER crashes even when offline or credentials misconfigured!
+ * 1. Clean and normalize MONGODB_URI.
+ * 2. Connect with 10s timeout to MongoDB Atlas.
+ * 3. In production (Render): require working Atlas connection, giving clear troubleshooting if failed.
+ * 4. In development: fall back to embedded MongoMemoryServer (MongoDB 7.0 for Debian 12 compatibility).
  */
 async function connectDB() {
   let customUri = process.env.MONGODB_URI;
 
   if (customUri) {
-    customUri = normalizeMongoUri(customUri);
+    customUri = cleanMongoUri(customUri);
     const masked = maskUri(customUri);
     console.log(`[DB] Attempting connection to MongoDB at ${masked}...`);
 
     try {
-      await mongoose.connect(customUri, { serverSelectionTimeoutMS: 8000 });
-      console.log(`[DB] Connected successfully to remote MongoDB (${masked}).`);
+      await mongoose.connect(customUri, { serverSelectionTimeoutMS: 10000 });
+      console.log(`[DB] Connected successfully to remote MongoDB Atlas!`);
       return;
     } catch (err) {
-      // Check if auth failed and try auto-recovering common casing (e.g. samir123 -> Samir123)
-      if (err.message && err.message.includes('authentication failed')) {
-        const altUri = tryTogglePasswordCapitalization(customUri);
-        if (altUri && altUri !== customUri) {
-          try {
-            console.log(`[DB] Retrying connection with normalized credentials...`);
-            await mongoose.connect(altUri, { serverSelectionTimeoutMS: 5000 });
-            console.log(`[DB] Connected successfully to remote MongoDB with normalized credentials!`);
-            return;
-          } catch (retryErr) {
-            console.warn(`[DB] Retry also failed: ${retryErr.message}`);
-          }
-        }
+      console.error(`[DB] Remote MongoDB connection failed: ${err.message}`);
+
+      // In production (Render / Cloud), never attempt in-memory server
+      if (process.env.NODE_ENV === 'production') {
+        console.error(`[DB] Production environment detected (NODE_ENV=production).`);
+        console.error(`[DB] In production, a valid MongoDB Atlas connection is required.`);
+        console.error(`[DB] Troubleshooting steps for MongoDB Atlas:`);
+        console.error(`  1. In MongoDB Atlas > Network Access, ensure IP 0.0.0.0/0 (Allow Anywhere) is added.`);
+        console.error(`  2. In Render Dashboard > Environment Variables, verify MONGODB_URI is set on a single line without extra characters.`);
+        throw err;
       }
 
-      console.warn(`[DB] Remote MongoDB connection failed: ${err.message}`);
-      console.warn(`[DB] Falling back to embedded MongoMemoryServer for uninterrupted local execution...`);
+      console.warn(`[DB] Falling back to embedded MongoMemoryServer for local development...`);
     }
   } else {
     // Try local MongoDB first with short timeout
@@ -95,11 +123,12 @@ async function connectDB() {
     }
   }
 
-  // Graceful fallback to MongoMemoryServer
+  // Fallback to MongoMemoryServer (configured with MongoDB 7.0 for Linux Debian 12 compatibility)
   try {
     const { MongoMemoryServer } = require('mongodb-memory-server');
     memoryServer = await MongoMemoryServer.create({
       instance: { dbName: 'consentguard' },
+      binary: { version: '7.0.14' },
     });
     const inMemoryUri = memoryServer.getUri();
     await mongoose.connect(inMemoryUri);
@@ -107,23 +136,6 @@ async function connectDB() {
   } catch (memErr) {
     console.error(`[DB] Failed to start embedded MongoDB:`, memErr);
     throw memErr;
-  }
-}
-
-/**
- * Helper to capitalize/uncapitalize first letter of password in URI
- */
-function tryTogglePasswordCapitalization(uri) {
-  try {
-    const credMatch = uri.match(/:\/\/([^:]+):([^@]+)@/);
-    if (!credMatch) return null;
-    const [, user, pass] = credMatch;
-    const firstChar = pass.charAt(0);
-    const toggledChar = firstChar === firstChar.toUpperCase() ? firstChar.toLowerCase() : firstChar.toUpperCase();
-    const newPass = toggledChar + pass.slice(1);
-    return uri.replace(`:${pass}@`, `:${newPass}@`);
-  } catch (e) {
-    return null;
   }
 }
 
@@ -136,4 +148,4 @@ async function disconnectDB() {
   }
 }
 
-module.exports = { connectDB, disconnectDB, normalizeMongoUri, maskUri };
+module.exports = { connectDB, disconnectDB, cleanMongoUri, maskUri };

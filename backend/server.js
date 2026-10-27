@@ -19,6 +19,7 @@ const auditRouter      = require('./src/routes/audit');
 const cacheRouter      = require('./src/routes/cache');
 
 const app  = express();
+app.enable('trust proxy');
 const PORT = process.env.PORT || 4000;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ app.use('/api/audit',      auditRouter);
 app.use('/api/cache',      cacheRouter);
 
 // ── Health check ──────────────────────────────────────────────────────────────
+app.get('/', (_req, res) => res.json({ status: 'ok', name: 'ConsentGuard API', version: '1.0.0' }));
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // ── Audit queue flush — every 10 seconds ─────────────────────────────────────
