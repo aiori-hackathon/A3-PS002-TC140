@@ -8,7 +8,20 @@ ConsentGuard is an enterprise-grade privacy and purpose-based consent management
 
 ---
 
+## 🌐 Live Prototype & Deployment URLs
+
+| Service | Host / Platform | Live Endpoint URL | Status |
+| :--- | :--- | :--- | :--- |
+| **Frontend Web App** | **Vercel** | [https://consent-guard-03.vercel.app/](https://consent-guard-03.vercel.app/) | [![Vercel](https://img.shields.io/badge/Vercel-Live-success?logo=vercel)](https://consent-guard-03.vercel.app/) |
+| **Backend API Gateway** | **Render** | [https://consentguard-03.onrender.com](https://consentguard-03.onrender.com) | [![Render](https://img.shields.io/badge/Render-Online-success?logo=render)](https://consentguard-03.onrender.com/health) |
+| **API Health Check** | **Render** | [https://consentguard-03.onrender.com/health](https://consentguard-03.onrender.com/health) | `{"status":"ok"}` |
+| **Database** | **MongoDB Atlas** | `cluster0.r9egch8.mongodb.net/consentguard` | Connected & Encrypted |
+| **Source Code** | **GitHub** | [https://github.com/Alizaaa02/ConsentGuard_03](https://github.com/Alizaaa02/ConsentGuard_03) | `main` |
+
+---
+
 ## 📑 Table of Contents
+- [Live Prototype & Deployment URLs](#-live-prototype--deployment-urls)
 - [Key Features](#-key-features)
 - [System Architecture](#-system-architecture)
 - [Project Directory Structure](#-project-directory-structure)
@@ -164,8 +177,8 @@ Consent_Guard1/
 ### 1. Clone & Install Dependencies
 ```bash
 # Clone the repository
-git clone https://github.com/khanSamir-jmi/Consent_Guard1.git
-cd Consent_Guard1
+git clone https://github.com/Alizaaa02/ConsentGuard_03.git
+cd ConsentGuard_03
 
 # Install backend dependencies
 cd backend && npm install
@@ -211,7 +224,7 @@ cd frontend
 npm run dev
 ```
 
-Visit **http://localhost:3000** to access the dashboard.
+Visit **http://localhost:3000** to access the local dashboard.
 Backend health endpoint is accessible at **http://localhost:4000/health**.
 
 ---
@@ -222,10 +235,10 @@ ConsentGuard features a resilient multi-mode database layer:
 
 ### Connecting to MongoDB Atlas
 1. Obtain your Atlas connection string:
-   `mongodb+srv://<username>:<password>@cluster0.xxx.mongodb.net/?retryWrites=true&w=majority`
+   `mongodb+srv://<username>:<password>@cluster0.r9egch8.mongodb.net/?retryWrites=true&w=majority`
 2. Configure `MONGODB_URI` in `backend/.env`:
    ```env
-   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxx.mongodb.net/consentguard?retryWrites=true&w=majority
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.r9egch8.mongodb.net/consentguard?retryWrites=true&w=majority
    ```
 3. **Automatic Normalization**:
    - Automatically cleans leading/trailing whitespace, line breaks, and duplicate hosts.
@@ -243,15 +256,15 @@ If `MONGODB_URI` is not set or the local daemon is unreachable:
 ## ☁️ Cloud Deployment (Render & Vercel)
 
 ```
-┌─────────────────────────────────┐        API Calls (CORS)       ┌─────────────────────────────────┐
-│       Frontend (Vercel)         │ ────────────────────────────▶ │        Backend (Render)         │
-│  https://consent-guard.vercel.app│                               │ https://consent-api.onrender.com│
-└─────────────────────────────────┘                               └────────────────┬────────────────┘
-                                                                                   │
-                                                                   ┌───────────────▼────────────────┐
-                                                                   │     MongoDB Atlas (Cloud)      │
-                                                                   │ 0.0.0.0/0 Whitelisted Network  │
-                                                                   └────────────────────────────────┘
+┌──────────────────────────────────────┐        API Calls (CORS)       ┌──────────────────────────────────────┐
+│          Frontend (Vercel)           │ ────────────────────────────▶ │           Backend (Render)           │
+│  https://consent-guard-03.vercel.app │                               │ https://consentguard-03.onrender.com │
+└──────────────────────────────────────┘                               └──────────────────┬───────────────────┘
+                                                                                          │
+                                                                       ┌──────────────────▼───────────────────┐
+                                                                       │        MongoDB Atlas (Cloud)         │
+                                                                       │    0.0.0.0/0 Whitelisted Network     │
+                                                                       └──────────────────────────────────────┘
 ```
 
 ### 1. MongoDB Atlas Network Access (Prerequisite)
@@ -265,7 +278,7 @@ Since cloud providers (Render, AWS) use dynamic outbound IPs:
 
 ### 2. Backend Deployment on Render
 1. Log in to [Render Dashboard](https://dashboard.render.com/) and click **New +** > **Web Service**.
-2. Connect your Git repository.
+2. Connect your Git repository (`ConsentGuard_03`).
 3. Configure service parameters:
    - **Root Directory**: `backend` *(Required)*
    - **Runtime**: `Node`
@@ -276,10 +289,12 @@ Since cloud providers (Render, AWS) use dynamic outbound IPs:
    | Key | Value |
    | :--- | :--- |
    | `NODE_ENV` | `production` |
-   | `MONGODB_URI` | `mongodb+srv://<username>:<password>@cluster0.xxx.mongodb.net/consentguard?retryWrites=true&w=majority` |
+   | `MONGODB_URI` | `mongodb+srv://<username>:<password>@cluster0.r9egch8.mongodb.net/consentguard?retryWrites=true&w=majority` |
    | `JWT_EXPIRES_IN` | `300` |
 5. In **Advanced**, set **Health Check Path** to `/health`.
-6. Click **Create Web Service**. Once deployed, copy your Render URL (e.g., `https://consentguard-backend.onrender.com`).
+6. Click **Create Web Service**.
+   - **Live Backend URL**: [https://consentguard-03.onrender.com](https://consentguard-03.onrender.com)
+   - **Health Check Endpoint**: [https://consentguard-03.onrender.com/health](https://consentguard-03.onrender.com/health)
 
 *(Note: The repository also contains [`render.yaml`](file:///C:/Users/ok/Hackathon/Consent_Guard1/render.yaml) for 1-click Blueprint deployment).*
 
@@ -287,15 +302,16 @@ Since cloud providers (Render, AWS) use dynamic outbound IPs:
 
 ### 3. Frontend Deployment on Vercel
 1. Log in to [Vercel](https://vercel.com/) and click **Add New...** > **Project**.
-2. Import your Git repository.
+2. Import your Git repository (`ConsentGuard_03`).
 3. In **Project Configuration**:
    - **Framework Preset**: `Next.js` (auto-detected).
    - **Root Directory**: Click **Edit** and choose `frontend` *(Required)*.
 4. Expand **Environment Variables**:
    | Key | Value |
    | :--- | :--- |
-   | `NEXT_PUBLIC_API_URL` | Your Render URL, e.g. `https://consentguard-backend.onrender.com` *(Do not add trailing slash)* |
-5. Click **Deploy**. Vercel will build and deploy the dashboard in under a minute.
+   | `NEXT_PUBLIC_API_URL` | `https://consentguard-03.onrender.com` *(Do not add trailing slash)* |
+5. Click **Deploy**.
+   - **Live Frontend URL**: [https://consent-guard-03.vercel.app/](https://consent-guard-03.vercel.app/)
 
 ---
 
