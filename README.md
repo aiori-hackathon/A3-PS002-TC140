@@ -1,276 +1,441 @@
 # ConsentGuard
-## Purpose-Based Consent Recording & Withdrawal Prototype
+## Purpose-Based Consent Recording, Enforcement & Withdrawal Framework
 ### Hackathon Reference: A3-PS002-TC140
 
-> **FitNest** (Data Fiduciary) × **PartnerHub** (Data Consumer)
+> **FitNest** (Data Fiduciary / Health & Fitness Platform) × **PartnerHub** (Data Consumer / Analytics & Research Partner)
+
+ConsentGuard is an enterprise-grade privacy and purpose-based consent management prototype designed to implement key principles of modern data protection regulations (e.g. DPDP Act, GDPR). It guarantees that consumer data access is cryptographically bound to explicit user consent, purpose-scoped, tamper-evident, and instantly revocable.
 
 ---
 
-## Architecture Overview
+## 📑 Table of Contents
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Project Directory Structure](#-project-directory-structure)
+- [Local Development Setup](#-local-development-setup)
+- [Database Configuration (MongoDB Atlas & Fallback)](#-database-configuration-mongodb-atlas--fallback)
+- [Cloud Deployment (Render & Vercel)](#-cloud-deployment-render--vercel)
+- [API Reference](#-api-reference)
+- [Cryptographic & Security Design](#-cryptographic--security-design)
+- [Automated Lifecycle Test Suite (T01–T20)](#-automated-lifecycle-test-suite-t01t20)
+- [License & Credits](#-license--credits)
+
+---
+
+## 🌟 Key Features
+
+1. **Independent, Purpose-Bound Scopes**:
+   - **`P1_ANALYTICS`** (Product Analytics): App usage telemetry, session counters.
+   - **`P2_PERSONALISATION`** (Personalised Recommendations): Workout preferences, coaching recommendations.
+   - **`P3_RESEARCH_SHARING`** (Biometric Research Sharing): Pseudonymised heart rate, sleep metrics.
+   - Granular, independent consent states per user without cross-purpose contamination.
+
+2. **Asymmetric Cryptographic Assertions (ES256 JWT)**:
+   - Short-lived (5-minute TTL) JSON Web Tokens signed with Elliptic Curve (P-256) keys.
+   - Tokens embed Consent Version (`cv`), Notice Version (`nv`), Subject ID (`sub`), and Purpose ID (`purpose`).
+   - Private key signs assertions; public key verifies them without exposing secrets. Supports environment-variable injected keys for cloud platforms.
+
+3. **Tamper-Evident SHA-256 Hash-Chain Audit Ledger**:
+   - Every grant and withdrawal event is cryptographically linked:
+     $$\text{hash} = \text{SHA256}(\text{prevHash} + \text{JSON}(\text{eventDetails}))$$
+   - Rooted in a deterministic `GENESIS` block for sequence 1.
+   - Built-in audit verifier tests mathematical chain continuity and identifies exact sequence tampering.
+
+4. **Dynamic Notice Versioning & Material Change Detection**:
+   - Supports notice modifications classified as `INITIAL`, `MATERIAL`, or `TYPO_NON_MATERIAL`.
+   - Material changes targeting specific purposes immediately invalidate existing consents (`403 NOTICE_OUTDATED`) and trigger explicit user re-prompts, while unaffected purposes remain active.
+
+5. **Multi-Tier Caching & Asynchronous Audit Queue**:
+   - Sub-millisecond write-through in-memory cache for ultra-fast consent enforcement lookups.
+   - Non-blocking asynchronous logging queue flushes enforcement decisions (`access_logs`) to persistent storage in periodic batches.
+
+6. **Self-Healing Hybrid Database Layer**:
+   - **MongoDB Atlas**: Auto-normalizes SRV connection URIs, strips copy-paste errors/line breaks, and URL-encodes special characters in passwords.
+   - **Zero-Config In-Memory Fallback**: Spins up embedded `MongoMemoryServer` (MongoDB 7.0.14) automatically if local/remote MongoDB is unreachable during local development.
+
+---
+
+## 🏛 System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        MONOREPO STRUCTURE                        │
-├──────────────────────────────────────────────────────────────────┤
-│  backend/          Node.js · Express · MongoDB · ES256 JWT        │
-│  ├── src/                                                        │
-│  │   ├── models/         4 Mongoose schemas                      │
-│  │   ├── services/       Cache, AuditQueue, Crypto, Consent      │
-│  │   ├── routes/         notices, consent, assertions,           │
-│  │   │                   partnerhub, audit                       │
-│  │   └── middleware/     enforceConsent pipeline                 │
-│  └── tests/             20 Jest lifecycle tests (T01-T20)        │
-│                                                                   │
-│  frontend/         Next.js · React · Tailwind CSS · Lucide Icons  │
-│  └── components/                                                  │
-│      ├── ConsentPortal.jsx      User grant/withdraw UI           │
-│      ├── PartnerHubSimulator.jsx Enforcement playground          │
-│      ├── NoticePublisher.jsx    Admin notice management          │
-│      └── AuditLedger.jsx        Hash-chain explorer             │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────┐       ES256 Assertion Token      ┌───────────────────────────────┐
+│  Data Principal │ ───────────────────────────────▶ │     ConsentGuard Backend      │
+│  (alice / bob)  │        (grant / withdraw)        │   (Express.js · Node.js 18+)  │
+└─────────────────┘                                  └───────────────┬───────────────┘
+                                                                     │
+                                      ┌──────────────────────────────┼──────────────────────────────┐
+                                      │                              │                              │
+                               ┌──────▼──────┐               ┌───────▼────────┐             ┌───────▼────────┐
+                               │   notices   │               │ consent_state  │             │ consent_events │
+                               │ (versioned) │               │  (fast lookup) │             │ (SHA256 chained│
+                               └─────────────┘               └────────────────┘             │     ledger)    │
+                                                                     │                      └────────────────┘
+                                      ┌──────────────────────────────▼──────────────────────────────┐
+                                      │              In-Memory Write-Through Cache (Map)            │
+                                      └──────────────────────────────┬──────────────────────────────┘
+                                                                     │
+┌────────────────────────────────────────────────────────────────────▼──────────────────────────────────────────────┐
+│                                       enforceConsent Middleware Pipeline                                           │
+│  1. Extract Bearer Token  ▶  2. Verify ES256 Signature & Expiry  ▶  3. Match Subject (sub) & Purpose              │
+│  4. Load Live Consent State (Cache-first)  ▶  5. Evaluate Notice Freshness  ▶  6. Verify Live CV vs Token CV      │
+│  7. Scoped Data Delivery Filter  ▶  8. Asynchronous Batch Audit Queue Log (`access_logs`)                         │
+└────────────────────────────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                                                     │
+                                                         ┌───────────▼───────────┐
+                                                         │   PartnerHub Gateway   │
+                                                         │ /api/partnerhub/records│
+                                                         └───────────────────────┘
 ```
 
 ---
 
-## System Architecture
+## 📂 Project Directory Structure
 
-```
-┌─────────────────┐     ES256 JWT      ┌─────────────────────────┐
-│   Data Principal│ ──── grant/withdraw ▶   ConsentGuard Backend   │
-│   (alice / bob) │                    │   (Express + MongoDB)    │
-└─────────────────┘                    └──────────┬──────────────┘
-                                                  │
-                          ┌───────────────────────┼───────────────────────┐
-                          │                       │                       │
-                   ┌──────▼──────┐       ┌────────▼───────┐    ┌─────────▼──────┐
-                   │   notices   │       │ consent_state  │    │ consent_events │
-                   │ (versioned) │       │ (fast-read)    │    │ (hash-chained  │
-                   └─────────────┘       └────────────────┘    │  ledger)       │
-                                                               └────────────────┘
-                                                                       │
-                   ┌──────────────────────────────────────────────────┐│
-                   │     In-Memory Write-Through Cache (Map)           ││
-                   └──────────────────────────────────────────────────┘│
-                                                                        │
-┌──────────────────────────────────────────────────────────────────────▼──────┐
-│                         enforceConsent Middleware Pipeline                   │
-│  1. verifyJWT (ES256)  →  2. Subject/Purpose Match  →  3. Load Live State   │
-│  4. decide() (status + notice freshness)  →  5. CV Freshness Check          │
-│  6. Scoped Data Delivery  →  Async AuditQueue → access_logs                 │
-└─────────────────────────────────────────────────────────────────────────────┘
-                          │
-              ┌───────────▼───────────┐
-              │   PartnerHub Mock API  │
-              │   /api/partnerhub/    │
-              │   records             │
-              └───────────────────────┘
+```text
+Consent_Guard1/
+├── backend/                             # Express.js Backend Service
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── db.js                    # Resilient MongoDB connector (Atlas + MongoMemoryServer)
+│   │   │   ├── keys.js                  # EC P-256 keypair loader (env/file/generator)
+│   │   │   ├── ec_private.pem           # Generated ECDSA private key
+│   │   │   └── ec_public.pem            # Generated ECDSA public key
+│   │   ├── middleware/
+│   │   │   └── enforceConsent.js        # 6-stage purpose enforcement pipeline
+│   │   ├── models/
+│   │   │   ├── AccessLog.js             # PartnerHub audit logging schema
+│   │   │   ├── ConsentEvent.js          # Tamper-evident hash chain event schema
+│   │   │   ├── ConsentState.js          # Live consent status & version schema
+│   │   │   └── Notice.js                # Versioned privacy notice schema
+│   │   ├── routes/
+│   │   │   ├── assertions.js            # JWT assertion generation route
+│   │   │   ├── audit.js                 # Ledger export, verification & tamper simulation
+│   │   │   ├── cache.js                 # In-memory cache invalidation endpoint
+│   │   │   ├── consent.js               # Grant, withdraw & consent status routes
+│   │   │   ├── notices.js               # Privacy notice publishing & retrieval routes
+│   │   │   └── partnerhub.js            # Purpose-governed data consumption endpoint
+│   │   ├── seed/
+│   │   │   └── seed.js                  # Idempotent database seeder (Notice v1 & users)
+│   │   └── services/
+│   │       ├── auditQueue.js            # High-throughput asynchronous audit flush queue
+│   │       ├── cacheService.js          # Write-through memory cache
+│   │       ├── consentService.js        # Grant/withdraw state machine & decider
+│   │       ├── cryptoService.js         # ES256 JWT minting & SHA-256 hash chaining
+│   │       └── noticeService.js         # Notice lifecycle & outdatedness engine
+│   ├── tests/
+│   │   └── lifecycle.test.js            # Comprehensive 20-test automated lifecycle suite
+│   ├── .env.example                     # Backend environment variable template
+│   ├── package.json                     # Backend dependencies & node --watch script
+│   └── server.js                        # Express app entrypoint & lifecycle bootstrap
+│
+├── frontend/                            # Next.js Dashboard Client
+│   ├── components/
+│   │   ├── AuditLedger.jsx              # Cryptographic audit ledger & tamper demo UI
+│   │   ├── ConsentPortal.jsx            # Data Principal consent manager (grant/withdraw)
+│   │   ├── NoticePublisher.jsx          # Admin notice version publisher & material flags
+│   │   └── PartnerHubSimulator.jsx      # API Gateway simulation & enforcement tester
+│   ├── pages/
+│   │   ├── _app.js                      # Next.js application shell
+│   │   └── index.js                     # Unified dashboard & real-time health indicator
+│   ├── styles/
+│   │   └── globals.css                  # Tailwind CSS root styling
+│   ├── utils/
+│   │   └── api.js                       # Dynamic backend URL resolver (cloud/local/mobile)
+│   ├── .env.example                     # Frontend environment variable template
+│   ├── next.config.js                   # Next.js compiler settings
+│   ├── package.json                     # Frontend dependencies & Next.js scripts
+│   └── tailwind.config.js               # Tailwind design system configuration
+│
+├── .gitignore                           # Excludes node_modules, build outputs, and .env files
+├── package.json                         # Root monorepo orchestration scripts
+├── render.yaml                          # Render Blueprint specification for backend deployment
+└── README.md                            # Complete technical documentation
 ```
 
 ---
 
-## Quick Start
+## 🚀 Local Development Setup
 
 ### Prerequisites
-- Node.js 18+ (macOS / Linux / Windows)
-- MongoDB is **OPTIONAL**: If you do not have MongoDB installed or running, ConsentGuard **automatically starts an embedded in-memory MongoDB instance** so you can run and test everything immediately with zero setup! If you do have a local or Atlas MongoDB, simply configure `MONGODB_URI` in `.env`.
+- **Node.js**: v18.0.0 or higher (`node -v`)
+- **npm**: v9.0.0 or higher (`npm -v`)
+- **MongoDB**: *Optional* — If no local MongoDB daemon or Atlas URI is detected, ConsentGuard will automatically run an embedded in-memory database instance.
 
-### 1. Start Backend Server
+### 1. Clone & Install Dependencies
 ```bash
-# From repository root:
-npm run backend:start
-# OR:
-cd backend
-npm start
-# Server starts on http://localhost:4000
-# - EC keypair auto-generated on first startup
-# - Notice v1 auto-seeded
-# - Embedded MongoDB starts automatically if local daemon is not running
+# Clone the repository
+git clone https://github.com/khanSamir-jmi/Consent_Guard1.git
+cd Consent_Guard1
+
+# Install backend dependencies
+cd backend && npm install
+
+# Install frontend dependencies
+cd ../frontend && npm install
+cd ..
 ```
 
-### 2. Start Frontend Dashboard
+### 2. Configure Environment Variables
+Create `.env` in `backend/` (or copy from `backend/.env.example`):
+```env
+# Optional: Set MongoDB Atlas URI or leave blank for embedded MongoDB
+MONGODB_URI=mongodb://localhost:27017/consentguard
+PORT=4000
+JWT_EXPIRES_IN=300
+```
+
+Create `.env.local` in `frontend/` (optional for local dev):
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000
+```
+
+### 3. Run the Services
+
+**Option A — Monorepo Convenience Commands (From Root):**
 ```bash
-# Development Mode (Hot Reloading + Mobile Network Access):
+# Terminal 1: Start Backend (auto-reloads on changes)
+npm run backend:dev
+
+# Terminal 2: Start Frontend Dashboard
 npm run frontend:dev
-# OR from frontend folder:
-cd frontend && npm run dev
-
-# Production Build & Preview:
-npm run build
-npm run preview
-# Dashboard is available on:
-# - Desktop: http://localhost:3000
-# - Mobile Phone (Same Wi-Fi): http://<YOUR_LOCAL_IP>:3000 (e.g. http://10.209.164.119:3000)
 ```
 
-### 3. Run All 20 Automated Tests
+**Option B — Independent Folders:**
 ```bash
-# From repository root:
+# Backend
+cd backend
+npm run dev
+
+# Frontend
+cd frontend
+npm run dev
+```
+
+Visit **http://localhost:3000** to access the dashboard.
+Backend health endpoint is accessible at **http://localhost:4000/health**.
+
+---
+
+## 🗄 Database Configuration (MongoDB Atlas & Fallback)
+
+ConsentGuard features a resilient multi-mode database layer:
+
+### Connecting to MongoDB Atlas
+1. Obtain your Atlas connection string:
+   `mongodb+srv://<username>:<password>@cluster0.xxx.mongodb.net/?retryWrites=true&w=majority`
+2. Configure `MONGODB_URI` in `backend/.env`:
+   ```env
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxx.mongodb.net/consentguard?retryWrites=true&w=majority
+   ```
+3. **Automatic Normalization**:
+   - Automatically cleans leading/trailing whitespace, line breaks, and duplicate hosts.
+   - Automatically URL-encodes special characters in passwords (e.g. `#`, `@`, `:`, `%`).
+   - Automatically masks credentials in console output (`mongodb+srv://user:****@...`).
+
+### Zero-Config Embedded In-Memory Fallback
+If `MONGODB_URI` is not set or the local daemon is unreachable:
+- ConsentGuard initializes `MongoMemoryServer` (v7.0.14) in-memory.
+- Seeds initial privacy notice version 1 automatically.
+- Perfect for offline demonstrations, testing, and continuous integration.
+
+---
+
+## ☁️ Cloud Deployment (Render & Vercel)
+
+```
+┌─────────────────────────────────┐        API Calls (CORS)       ┌─────────────────────────────────┐
+│       Frontend (Vercel)         │ ────────────────────────────▶ │        Backend (Render)         │
+│  https://consent-guard.vercel.app│                               │ https://consent-api.onrender.com│
+└─────────────────────────────────┘                               └────────────────┬────────────────┘
+                                                                                   │
+                                                                   ┌───────────────▼────────────────┐
+                                                                   │     MongoDB Atlas (Cloud)      │
+                                                                   │ 0.0.0.0/0 Whitelisted Network  │
+                                                                   └────────────────────────────────┘
+```
+
+### 1. MongoDB Atlas Network Access (Prerequisite)
+Since cloud providers (Render, AWS) use dynamic outbound IPs:
+1. Log in to [MongoDB Atlas](https://cloud.mongodb.com/).
+2. Navigate to **Security** > **Network Access**.
+3. Click **Add IP Address** > Select **Allow Access from Anywhere** (`0.0.0.0/0`).
+4. Click **Confirm**.
+
+---
+
+### 2. Backend Deployment on Render
+1. Log in to [Render Dashboard](https://dashboard.render.com/) and click **New +** > **Web Service**.
+2. Connect your Git repository.
+3. Configure service parameters:
+   - **Root Directory**: `backend` *(Required)*
+   - **Runtime**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Instance Type**: `Free`
+4. In **Environment Variables**, add:
+   | Key | Value |
+   | :--- | :--- |
+   | `NODE_ENV` | `production` |
+   | `MONGODB_URI` | `mongodb+srv://<username>:<password>@cluster0.xxx.mongodb.net/consentguard?retryWrites=true&w=majority` |
+   | `JWT_EXPIRES_IN` | `300` |
+5. In **Advanced**, set **Health Check Path** to `/health`.
+6. Click **Create Web Service**. Once deployed, copy your Render URL (e.g., `https://consentguard-backend.onrender.com`).
+
+*(Note: The repository also contains [`render.yaml`](file:///C:/Users/ok/Hackathon/Consent_Guard1/render.yaml) for 1-click Blueprint deployment).*
+
+---
+
+### 3. Frontend Deployment on Vercel
+1. Log in to [Vercel](https://vercel.com/) and click **Add New...** > **Project**.
+2. Import your Git repository.
+3. In **Project Configuration**:
+   - **Framework Preset**: `Next.js` (auto-detected).
+   - **Root Directory**: Click **Edit** and choose `frontend` *(Required)*.
+4. Expand **Environment Variables**:
+   | Key | Value |
+   | :--- | :--- |
+   | `NEXT_PUBLIC_API_URL` | Your Render URL, e.g. `https://consentguard-backend.onrender.com` *(Do not add trailing slash)* |
+5. Click **Deploy**. Vercel will build and deploy the dashboard in under a minute.
+
+---
+
+## 📡 API Reference
+
+### 1. Notices & Privacy Policy
+- **`GET /api/notices/current`**: Retrieves the current active privacy notice with all purpose definitions.
+- **`POST /api/notices/publish`**: (Admin) Publishes a new notice version.
+  ```json
+  {
+    "changeType": "MATERIAL",
+    "affectedPurposes": ["P3_RESEARCH_SHARING"],
+    "purposes": { ... }
+  }
+  ```
+
+### 2. Consent State
+- **`GET /api/consent/:userId`**: Returns live consent status (`GRANTED`, `WITHDRAWN`, `NONE`), consent versions (`cv`), and outdated flags for all 3 purposes.
+- **`POST /api/consent/grant`**: Grants consent for a specified purpose and notice version.
+  ```json
+  { "userId": "alice", "purposeId": "P1_ANALYTICS", "noticeVersion": 1 }
+  ```
+- **`POST /api/consent/withdraw`**: Withdraws consent immediately (increments `cv`, appends to hash chain).
+  ```json
+  { "userId": "alice", "purposeId": "P1_ANALYTICS" }
+  ```
+
+### 3. Assertion Tokens
+- **`POST /api/assertions`**: Issues an asymmetric ES256 JWT assertion verifying that consent is currently granted.
+  ```json
+  { "userId": "alice", "purposeId": "P1_ANALYTICS" }
+  ```
+  Returns:
+  ```json
+  {
+    "assertionToken": "eyJhbGciOiJFUzI1NiIs...",
+    "expiresIn": 300,
+    "claims": { "sub": "alice", "purpose": "P1_ANALYTICS", "nv": 1, "cv": 1 }
+  }
+  ```
+
+### 4. PartnerHub Data Consumption Gateway
+- **`GET /api/partnerhub/records?userId=alice&purposeId=P1_ANALYTICS`**:
+  - Requires header: `Authorization: Bearer <assertionToken>`
+  - Evaluated via `enforceConsent` middleware.
+  - Returns purpose-filtered data if valid (`200 OK`), or denies with standard reason codes (`401` / `403`).
+
+### 5. Audit & Ledger Verification
+- **`GET /api/audit/export/:userId`**: Exports the entire SHA-256 hash-chained event ledger and access logs.
+- **`GET /api/audit/verify/:userId`**: Executes mathematical integrity verification across all blocks in sequence.
+  Returns: `{ "chainValid": true, "totalEvents": 4 }`
+- **`POST /api/audit/simulate-tamper/:userId`**: Modifies an existing ledger entry in the database to simulate malicious tampering for demonstration.
+- **`POST /api/audit/flush-queue`**: Forces an immediate flush of the asynchronous audit queue to database.
+
+### 6. Health & Diagnostics
+- **`GET /health`**: Returns `{ "status": "ok" }`.
+- **`GET /`**: Returns API metadata and version.
+
+---
+
+## 🔒 Cryptographic & Security Design
+
+### 1. Hash-Chain Event Record
+Every consent grant or revocation generates an immutable event record:
+```json
+{
+  "userId": "alice",
+  "seq": 2,
+  "purposeId": "P1_ANALYTICS",
+  "action": "WITHDRAW",
+  "noticeVersion": 1,
+  "cv": 2,
+  "timestamp": "2026-10-28T10:15:30.123Z",
+  "prevHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "hash": "7a35c45b89c31149afbf4c8996fb92427ae41e4649b934ca495991b7852bb33"
+}
+```
+
+### 2. Token Claims (ES256)
+```json
+{
+  "sub": "alice",
+  "purpose": "P1_ANALYTICS",
+  "nv": 1,
+  "cv": 1,
+  "iss": "ConsentGuard",
+  "aud": "PartnerHub",
+  "iat": 1730110000,
+  "exp": 1730110300
+}
+```
+
+### 3. Reason Codes (Denial Diagnostics)
+| Code | HTTP Status | Description |
+| :--- | :--- | :--- |
+| `INVALID_TOKEN` | 401 | Missing, malformed, expired, or invalid ES256 signature |
+| `SUBJECT_MISMATCH` | 403 | Token `sub` does not match the requested `userId` |
+| `PURPOSE_MISMATCH` | 403 | Token `purpose` does not match the requested `purposeId` |
+| `NO_CONSENT` | 403 | No consent record found for the requested purpose |
+| `CONSENT_WITHDRAWN` | 403 | Consent was revoked by the user |
+| `NOTICE_OUTDATED` | 403 | A material notice revision invalidated the consent version |
+| `TOKEN_STALE` | 403 | Token `cv` does not match live database `cv` (prevents replay post-withdrawal) |
+
+---
+
+## 🧪 Automated Lifecycle Test Suite (T01–T20)
+
+ConsentGuard features a full 20-test automated lifecycle suite covering all states, transitions, cryptographic verifications, and cache fallback mechanisms.
+
+```bash
+# Run tests from root:
 npm test
-# Runs all 20 lifecycle tests (T01-T20) in ~1 second
 ```
 
----
-
-## API Reference
-
-### Notice Service
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`  | `/api/notices/current` | Latest notice + per-user outdated flags |
-| `POST` | `/api/notices/publish` | Publish new notice version (admin) |
-
-### Consent Service
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`  | `/api/consent/:userId` | All 3 purpose states + flags |
-| `POST` | `/api/consent/grant` | Grant consent for a purpose |
-| `POST` | `/api/consent/withdraw` | Withdraw consent (idempotent) |
-
-### Assertion Token Issuer
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/assertions` | Issue ES256 JWT (5-min TTL) |
-
-### PartnerHub Mock API
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`  | `/api/partnerhub/records` | Access scoped data (requires Bearer JWT) |
-
-### Audit Service
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET`  | `/api/audit/export/:userId` | Full chain + logs export |
-| `GET`  | `/api/audit/verify/:userId` | Chain integrity verification |
-| `POST` | `/api/audit/simulate-tamper/:userId` | Demo tamper injection |
-| `POST` | `/api/audit/flush-queue` | Flush async audit queue to DB |
-
-### Utility (Testing)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/cache/clear` | Clear in-memory cache (T20) |
+| ID | Test Scenario | Expected Outcome |
+| :--- | :--- | :--- |
+| **T01** | Grant P1 with notice v1 | `200 GRANTED`, `cv=1`, event stored |
+| **T02** | Independent purpose isolation (P1, P2, P3) | Three distinct states, each with independent `cv=1` |
+| **T03** | Grant against stale notice version | Rejected with `409 NOTICE_OUTDATED` |
+| **T04** | Valid token access to PartnerHub P1 | `200 OK`, delivers strictly scoped telemetry data |
+| **T05** | Assertion requested with no consent granted | Rejected with `403 NO_CONSENT` |
+| **T06** | Withdraw consent for P2 | `200 WITHDRAWN`, `cv` increments to 2 |
+| **T07** | Replay old token post-withdrawal | Blocked with `403 TOKEN_STALE` |
+| **T08** | Withdrawal of P2 leaves P1 and P3 unaffected | P1/P3 tokens continue to return `200 OK` |
+| **T09** | Present P1 token to access P2 endpoint | Blocked with `403 PURPOSE_MISMATCH` |
+| **T10** | Present tampered/corrupted JWT signature | Blocked with `401 INVALID_TOKEN` |
+| **T11** | Material notice update published affecting only P3 | P3 blocked with `403 NOTICE_OUTDATED`; P1/P2 unaffected (`200 OK`) |
+| **T12** | Re-consent P3 against notice v2 | `200 GRANTED`, `cv` incremented, v1 history preserved in ledger |
+| **T13** | Non-material typo notice update published | No re-consent required; existing tokens remain `200 OK` |
+| **T14** | Re-grant creates `cv=3`; attempt using `cv=1` token | Blocked with `403 TOKEN_STALE` |
+| **T15** | Idempotent double withdrawal on same purpose | Handled cleanly without corrupting state or hash chain |
+| **T16** | Cross-tenant exploit (Alice token requesting Bob data) | Blocked with `403 SUBJECT_MISMATCH` |
+| **T17** | Full lifecycle audit export and verification | Hash chain verification returns `chainValid: true` |
+| **T18** | Simulated event tampering in ledger database | Verifier flags `chainValid: false` and points to exact broken sequence |
+| **T19** | Denied requests (401/403) flushed from async queue | Accurately recorded in persistent `access_logs` |
+| **T20** | In-memory cache cleared during execution | Middleware seamlessly falls back to MongoDB with exact decisions |
 
 ---
 
-## enforceConsent Middleware — Pseudocode
+## 📄 License & Credits
 
-```
-FUNCTION enforceConsent(req, res, next):
-
-  # Step 1: Token Extraction & Crypto Verification
-  token = extractBearerToken(req.headers.authorization)
-  IF token is missing OR invalid:
-    RETURN 401 { reason: "INVALID_TOKEN" }
-  
-  claims = verifyES256JWT(token)  # checks signature + expiry + aud="PartnerHub"
-  IF verification fails:
-    logAudit(DENIED, 401, INVALID_TOKEN)
-    RETURN 401 { reason: "INVALID_TOKEN" }
-
-  # Step 2: Subject & Purpose Match
-  IF claims.sub ≠ req.query.userId:
-    logAudit(DENIED, 403, SUBJECT_MISMATCH)
-    RETURN 403 { reason: "SUBJECT_MISMATCH" }
-  
-  IF claims.purpose ≠ req.query.purposeId:
-    logAudit(DENIED, 403, PURPOSE_MISMATCH)
-    RETURN 403 { reason: "PURPOSE_MISMATCH" }
-
-  # Step 3: Load Live Consent State (Cache-first)
-  key = "${userId}:${purposeId}"
-  state = cache.get(key)
-  IF state is null:
-    state = await ConsentState.findOne({ userId, purposeId })
-    IF state: cache.set(key, state)  # populate cache
-
-  # Step 4: Status & Notice Freshness Evaluation
-  decision = decide(state, latestNotice, purposeId)
-  WHERE decide() is:
-    IF !state OR state.status == 'NONE'      → { allowed: false, reason: 'NO_CONSENT' }
-    IF state.status == 'WITHDRAWN'            → { allowed: false, reason: 'CONSENT_WITHDRAWN' }
-    IF isOutdated(purposeId, state.nv, currentNotice):
-                                              → { allowed: false, reason: 'NOTICE_OUTDATED' }
-    ELSE                                      → { allowed: true }
-  
-  IF NOT decision.allowed:
-    logAudit(DENIED, 403, decision.reason)
-    RETURN 403 { reason: decision.reason }
-
-  # Step 5: CV Freshness (Replay / Stale Token Detection)
-  IF claims.cv ≠ state.cv:
-    logAudit(DENIED, 403, TOKEN_STALE)
-    RETURN 403 { reason: "TOKEN_STALE" }
-
-  # Step 6: Scoped Data Delivery
-  logAudit(ALLOWED, 200, OK)
-  req.consentClaims = claims
-  req.liveState = state
-  CALL next()  → handler returns data[userId][purposeId] filtered to allowed categories
-```
-
----
-
-## Domain Entities
-
-### Data Principals (Synthetic Users)
-| User | P1_ANALYTICS | P2_PERSONALISATION | P3_RESEARCH_SHARING |
-|------|-------------|-------------------|---------------------|
-| alice | `{ appUsageEvents: [...], sessionCount: 14 }` | `{ activitySummary: "...", preferences: [...] }` | `{ pseudonymisedHeartRate: [...], sleepHours: 7.4 }` |
-| bob | Same structure | Same structure | Same structure |
-
-### Three Independent Purposes
-| ID | Title | Data Categories |
-|----|-------|-----------------|
-| `P1_ANALYTICS` | App Analytics | `appUsageEvents`, `sessionCount` |
-| `P2_PERSONALISATION` | Personalisation | `activitySummary`, `preferences` |
-| `P3_RESEARCH_SHARING` | Research Sharing | `pseudonymisedHeartRate`, `sleepHours` |
-
-### Hash Chain Formula
-```
-hash = SHA256(prevHash + JSON.stringify({ userId, seq, purposeId, action, noticeVersion, cv, timestamp }))
-```
-- `seq=1`: `prevHash = "GENESIS"`
-- Each subsequent event: `prevHash = previous_event.hash`
-
----
-
-## 20-Test Lifecycle Suite Summary
-
-| Test | Description | Expected |
-|------|-------------|----------|
-| T01 | Grant P1 with notice v1 | `200 GRANTED, cv=1` |
-| T02 | Grant P1+P2+P3 independently | Each `cv=1`, independent state |
-| T03 | Grant with stale notice version | `409 NOTICE_OUTDATED` |
-| T04 | Valid token → PartnerHub P1 | `200`, scoped data only |
-| T05 | No consent → assertion | `403 NO_CONSENT` |
-| T06 | Withdraw P2 after grant | `200 WITHDRAWN, cv=2` |
-| T07 | Reuse P2 token after withdrawal | `403 TOKEN_STALE` |
-| T08 | Withdraw P2 → P1/P3 unaffected | P1+P3 still `200 OK` |
-| T09 | P1 token → P2 data | `403 PURPOSE_MISMATCH` |
-| T10 | Tampered JWT | `401 INVALID_TOKEN` |
-| T11 | Material notice v2 (P3 only) | P3→`403 NOTICE_OUTDATED`, P1/P2→`200` |
-| T12 | Re-consent P3 against v2 | `200 GRANTED, cv++` |
-| T13 | Typo/non-material notice | No re-prompt, `200` valid |
-| T14 | cv=1 token after cv=3 state | `403 TOKEN_STALE` |
-| T15 | Double withdrawal | Idempotent, `cv` unchanged |
-| T16 | Alice token → Bob's data | `403 SUBJECT_MISMATCH` |
-| T17 | Export + verify chain | `chainValid: true` |
-| T18 | Tamper event → verify | `chainValid: false` |
-| T19 | Denied requests → access_logs | Flushed and recorded |
-| T20 | Clear cache → MongoDB fallback | Same decisions |
-
----
-
-## Security Design Principles
-
-1. **Cryptographic Non-Repudiation**: Every consent event is SHA-256 hash-chained
-2. **Purpose Limitation**: PartnerHub receives ONLY the data categories for the specific consented purpose
-3. **Token Staleness Detection**: JWT `cv` claim vs live DB `cv` prevents token replay after withdrawal
-4. **Notice Version Enforcement**: Material notice changes invalidate existing consents immediately
-5. **Write-Through Cache**: In-memory Map ensures sub-millisecond enforcement reads
-6. **Async Audit Queue**: Enforcement decisions are non-blocking, durably logged to `access_logs`
-7. **ES256 Asymmetric Signatures**: Private key signs tokens; public key verifies (no shared secret)
-
----
-
-*Built for Hackathon A3-PS002-TC140 | FitNest × PartnerHub Prototype*
-# Consent_Guard1
+Built for **Hackathon Reference A3-PS002-TC140** | FitNest × PartnerHub Prototype.  
+Licensed under the [ISC License](file:///C:/Users/ok/Hackathon/Consent_Guard1/package.json).
