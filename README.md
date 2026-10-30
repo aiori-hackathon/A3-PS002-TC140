@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # ConsentGuard
 ## Purpose-Based Consent Recording, Enforcement & Withdrawal Framework
 ### Hackathon Reference: A3-PS002-TC140
