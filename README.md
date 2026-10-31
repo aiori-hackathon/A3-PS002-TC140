@@ -1,19 +1,26 @@
-
 # ConsentGuard
 ## Purpose-Based Consent Recording, Enforcement & Withdrawal Framework
-### Hackathon Reference: A3-PS002-TC140
+### AIORI Hackathon 3 | Problem Statement: PS-002 | Team Code: `A3-PS002-TC140`
 
-> **FitNest** (Data Fiduciary / Health & Fitness Platform) × **PartnerHub** (Data Consumer / Analytics & Research Partner)
-
-ConsentGuard is an enterprise-grade privacy and purpose-based consent management prototype designed to implement key principles of modern data protection regulations (e.g. DPDP Act, GDPR). It guarantees that consumer data access is cryptographically bound to explicit user consent, purpose-scoped, tamper-evident, and instantly revocable.
+> **Team Name:** No means No  
+> **Synthetic Ecosystem:** **FitNest** (Data Fiduciary / Health & Fitness Platform) $\times$ **PartnerHub** (Data Consumer / Analytics & Research Partner)
 
 ---
 
-## 🌐 Live Prototype & Deployment URLs
+## 🌐 Live Prototype, Videos & Deployment Links
 
-| Service | Host / Platform | Live Endpoint URL | Status |
+* 🚀 **Live Frontend Web App (Vercel):** [https://consent-guard1.vercel.app/](https://consent-guard1.vercel.app/)
+* 🎬 **Prototype Demonstration Video (YouTube):** [https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA](https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA)
+* 🎥 **Team Introduction & Pitch Video (YouTube):** [https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik](https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik)
+* ⚙️ **Backend API Gateway (Render):** [https://consentguard-03.onrender.com](https://consentguard-03.onrender.com)
+* 🩺 **Backend API Health Check (Render):** [https://consentguard-03.onrender.com/health](https://consentguard-03.onrender.com/health)
+* 💻 **GitHub Source Repository:** [https://github.com/Alizaaa02/ConsentGuard_03](https://github.com/Alizaaa02/ConsentGuard_03)
+
+| Service / Resource | Host / Platform | Live Endpoint / URL | Status |
 | :--- | :--- | :--- | :--- |
-| **Frontend Web App** | **Vercel** | [https://consent-guard-03.vercel.app/](https://consent-guard-03.vercel.app/) | [![Vercel](https://img.shields.io/badge/Vercel-Live-success?logo=vercel)](https://consent-guard-03.vercel.app/) |
+| **Frontend Web App** | **Vercel** | [https://consent-guard1.vercel.app/](https://consent-guard1.vercel.app/) | [![Vercel](https://img.shields.io/badge/Vercel-Live-success?logo=vercel)](https://consent-guard1.vercel.app/) |
+| **Prototype Demo Video** | **YouTube** | [https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA](https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA) | [![YouTube](https://img.shields.io/badge/YouTube-Demo_Video-red?logo=youtube)](https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA) |
+| **Team Intro & Pitch Video** | **YouTube** | [https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik](https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik) | [![YouTube](https://img.shields.io/badge/YouTube-Team_Pitch-red?logo=youtube)](https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik) |
 | **Backend API Gateway** | **Render** | [https://consentguard-03.onrender.com](https://consentguard-03.onrender.com) | [![Render](https://img.shields.io/badge/Render-Online-success?logo=render)](https://consentguard-03.onrender.com/health) |
 | **API Health Check** | **Render** | [https://consentguard-03.onrender.com/health](https://consentguard-03.onrender.com/health) | `{"status":"ok"}` |
 | **Database** | **MongoDB Atlas** | `cluster0.r9egch8.mongodb.net/consentguard` | Connected & Encrypted |
@@ -21,10 +28,19 @@ ConsentGuard is an enterprise-grade privacy and purpose-based consent management
 
 ---
 
+## 📌 Project Overview
+
+**ConsentGuard** is an enterprise-grade privacy and purpose-based consent management prototype designed to implement key principles of modern data protection regulations (e.g., India's DPDP Act 2023, DPDP Rules 2025, and GDPR Art. $5$ & $7$). It guarantees that consumer data access is cryptographically bound to explicit user consent, purpose-scoped, tamper-evident, and instantly revocable at request time.
+
+---
+
 ## 📑 Table of Contents
-- [Live Prototype & Deployment URLs](#-live-prototype--deployment-urls)
+- [Live Prototype, Videos & Deployment Links](#-live-prototype-videos--deployment-links)
+- [Project Overview](#-project-overview)
+- [Problem & Regulatory Alignment](#-problem--regulatory-alignment)
 - [Key Features](#-key-features)
 - [System Architecture](#-system-architecture)
+- [Mentor Deliverable: `enforceConsent` Pseudocode](#-mentor-deliverable-enforceconsent-pseudocode)
 - [Project Directory Structure](#-project-directory-structure)
 - [Local Development Setup](#-local-development-setup)
 - [Database Configuration (MongoDB Atlas & Fallback)](#-database-configuration-mongodb-atlas--fallback)
@@ -32,7 +48,24 @@ ConsentGuard is an enterprise-grade privacy and purpose-based consent management
 - [API Reference](#-api-reference)
 - [Cryptographic & Security Design](#-cryptographic--security-design)
 - [Automated Lifecycle Test Suite (T01–T20)](#-automated-lifecycle-test-suite-t01t20)
+- [Team Members](#-team-members)
 - [License & Credits](#-license--credits)
+
+---
+
+## ⚖️ Problem & Regulatory Alignment
+
+Traditional consent workflows suffer from **blanket consent**, **opaque policy updates**, **delayed withdrawal propagation**, and **unverifiable audit logs**. ConsentGuard bridges the gap between legal mandates and real-time enforcement:
+
+| Standard / RFC / Regulation | Core Principle | How ConsentGuard Implements It |
+| :--- | :--- | :--- |
+| **DPDP Act 2023 (§5–6) & Rules 2025** | Specific, informed consent; withdrawal as easy as granting; log retention | Per-purpose cards, 1-click grant/withdraw, real-time consumer enforcement, and append-only audit logs |
+| **GDPR Art. 5(1)(b), Art. 7** | Purpose limitation & demonstrable consent | Independent state machines per purpose (`P1`, `P2`, `P3`) + exportable hash-chained evidence |
+| **Kantara Consent Receipt v1.1** | Machine-readable consent record | Ties consent records directly to live API gateway enforcement and a SHA-256 hash chain |
+| **ISO/IEC 29184:2020** | Online privacy notices and consent | Versioned notices ($nv$) with incremental re-consent only on affected purposes |
+| **RFC 7519 / RFC 8725 (JWT)** | Signed tokens & security best practices | 5-minute ES256 assertion tokens augmented with a live consent-version ($cv$) freshness check |
+| **RFC 7009 / RFC 7662** | OAuth token revocation & introspection | Replaces slow network introspection with a $< 5\text{ ms}$ write-through in-memory cache $cv$ check |
+| **RFC 6962 / Schneier-Kelsey** | Append-only, tamper-evident audit logs | Per-user SHA-256 hash chain ($\text{hash} = \text{SHA256}(\text{prevHash} + \text{event})$) with an automated verifier endpoint |
 
 ---
 
@@ -46,24 +79,28 @@ ConsentGuard is an enterprise-grade privacy and purpose-based consent management
 
 2. **Asymmetric Cryptographic Assertions (ES256 JWT)**:
    - Short-lived (5-minute TTL) JSON Web Tokens signed with Elliptic Curve (P-256) keys.
-   - Tokens embed Consent Version (`cv`), Notice Version (`nv`), Subject ID (`sub`), and Purpose ID (`purpose`).
+   - Tokens embed Consent Version ($cv$), Notice Version ($nv$), Subject ID (`sub`), and Purpose ID (`purpose`).
    - Private key signs assertions; public key verifies them without exposing secrets. Supports environment-variable injected keys for cloud platforms.
 
-3. **Tamper-Evident SHA-256 Hash-Chain Audit Ledger**:
+3. **Instant Revocation via Consent Versioning ($cv$)**:
+   - Every grant or withdrawal increments a monotonic counter ($cv$) per user-purpose pair and updates the write-through cache before returning `200 OK`.
+   - Any previously issued, unexpired token carrying an older $cv$ is immediately denied (`403 CONSENT_WITHDRAWN` / `TOKEN_STALE`).
+
+4. **Tamper-Evident SHA-256 Hash-Chain Audit Ledger**:
    - Every grant and withdrawal event is cryptographically linked:
      $$\text{hash} = \text{SHA256}(\text{prevHash} + \text{JSON}(\text{eventDetails}))$$
    - Rooted in a deterministic `GENESIS` block for sequence 1.
    - Built-in audit verifier tests mathematical chain continuity and identifies exact sequence tampering.
 
-4. **Dynamic Notice Versioning & Material Change Detection**:
+5. **Dynamic Notice Versioning ($nv$) & Material Change Detection**:
    - Supports notice modifications classified as `INITIAL`, `MATERIAL`, or `TYPO_NON_MATERIAL`.
    - Material changes targeting specific purposes immediately invalidate existing consents (`403 NOTICE_OUTDATED`) and trigger explicit user re-prompts, while unaffected purposes remain active.
 
-5. **Multi-Tier Caching & Asynchronous Audit Queue**:
-   - Sub-millisecond write-through in-memory cache for ultra-fast consent enforcement lookups.
+6. **Multi-Tier Caching & Asynchronous Audit Queue**:
+   - Sub-millisecond ($< 5\text{ ms}$) write-through in-memory cache for ultra-fast consent enforcement lookups.
    - Non-blocking asynchronous logging queue flushes enforcement decisions (`access_logs`) to persistent storage in periodic batches.
 
-6. **Self-Healing Hybrid Database Layer**:
+7. **Self-Healing Hybrid Database Layer**:
    - **MongoDB Atlas**: Auto-normalizes SRV connection URIs, strips copy-paste errors/line breaks, and URL-encodes special characters in passwords.
    - **Zero-Config In-Memory Fallback**: Spins up embedded `MongoMemoryServer` (MongoDB 7.0.14) automatically if local/remote MongoDB is unreachable during local development.
 
@@ -71,7 +108,7 @@ ConsentGuard is an enterprise-grade privacy and purpose-based consent management
 
 ## 🏛 System Architecture
 
-```
+```text
 ┌─────────────────┐       ES256 Assertion Token      ┌───────────────────────────────┐
 │  Data Principal │ ───────────────────────────────▶ │     ConsentGuard Backend      │
 │  (alice / bob)  │        (grant / withdraw)        │   (Express.js · Node.js 18+)  │
@@ -82,7 +119,7 @@ ConsentGuard is an enterprise-grade privacy and purpose-based consent management
                                ┌──────▼──────┐               ┌───────▼────────┐             ┌───────▼────────┐
                                │   notices   │               │ consent_state  │             │ consent_events │
                                │ (versioned) │               │  (fast lookup) │             │ (SHA256 chained│
-                               └─────────────┘               └────────────────┘             │     ledger)    │
+                               └─────────────┘               └───────┬────────┘             │     ledger)    │
                                                                      │                      └────────────────┘
                                       ┌──────────────────────────────▼──────────────────────────────┐
                                       │              In-Memory Write-Through Cache (Map)            │
@@ -99,6 +136,37 @@ ConsentGuard is an enterprise-grade privacy and purpose-based consent management
                                                          │   PartnerHub Gateway   │
                                                          │ /api/partnerhub/records│
                                                          └───────────────────────┘
+```
+
+---
+
+## 💻 Mentor Deliverable: `enforceConsent` Pseudocode
+
+```javascript
+async function enforceConsent(req, res, next) {
+  // 1. Local cryptographic check (ES256 Public Key, zero network I/O)
+  const claims = jwt.verify(token, pubKey, { algorithms: ['ES256'], audience: 'PartnerHub' });
+  if (!claims) return deny(res, 401, 'INVALID_TOKEN');
+
+  // 2. Subject & purpose binding check
+  if (claims.sub !== req.query.userId) return deny(res, 403, 'SUBJECT_MISMATCH');
+  if (claims.purpose !== req.query.purposeId) return deny(res, 403, 'PURPOSE_MISMATCH');
+
+  // 3. Load live consent state: Write-through cache first, fallback to MongoDB
+  const key = `${req.query.userId}:${req.query.purposeId}`;
+  const state = cache.get(key) ?? await db.consent_state.findOne({ userId, purposeId });
+
+  // 4. Evaluate consent status & notice version freshness
+  const decision = decide(state, latestNoticeMeta);
+  if (!decision.allow) return deny(res, 403, decision.reason); // NO_CONSENT | CONSENT_WITHDRAWN | NOTICE_OUTDATED
+
+  // 5. Consent Version (cv) freshness check (prevents replay of unexpired tokens post-withdrawal)
+  if (claims.cv !== state.cv) return deny(res, 403, 'TOKEN_STALE');
+
+  // 6. Allow request & asynchronously enqueue audit log
+  auditQueue.push({ userId, purposeId, decision: 'ALLOWED', httpStatus: 200, reasonCode: 'OK' });
+  return next();
+}
 ```
 
 ---
@@ -225,7 +293,7 @@ cd frontend
 npm run dev
 ```
 
-Visit **http://localhost:3000** to access the local dashboard.
+Visit **http://localhost:3000** to access the local dashboard.  
 Backend health endpoint is accessible at **http://localhost:4000/health**.
 
 ---
@@ -243,7 +311,7 @@ ConsentGuard features a resilient multi-mode database layer:
    ```
 3. **Automatic Normalization**:
    - Automatically cleans leading/trailing whitespace, line breaks, and duplicate hosts.
-   - Automatically URL-encodes special characters in passwords (e.g. `#`, `@`, `:`, `%`).
+   - Automatically URL-encodes special characters in passwords (e.g., `#`, `@`, `:`, `%`).
    - Automatically masks credentials in console output (`mongodb+srv://user:****@...`).
 
 ### Zero-Config Embedded In-Memory Fallback
@@ -256,10 +324,10 @@ If `MONGODB_URI` is not set or the local daemon is unreachable:
 
 ## ☁️ Cloud Deployment (Render & Vercel)
 
-```
+```text
 ┌──────────────────────────────────────┐        API Calls (CORS)       ┌──────────────────────────────────────┐
 │          Frontend (Vercel)           │ ────────────────────────────▶ │           Backend (Render)           │
-│  https://consent-guard-03.vercel.app │                               │ https://consentguard-03.onrender.com │
+│   https://consent-guard1.vercel.app  │                               │ https://consentguard-03.onrender.com │
 └──────────────────────────────────────┘                               └──────────────────┬───────────────────┘
                                                                                           │
                                                                        ┌──────────────────▼───────────────────┐
@@ -274,8 +342,6 @@ Since cloud providers (Render, AWS) use dynamic outbound IPs:
 2. Navigate to **Security** > **Network Access**.
 3. Click **Add IP Address** > Select **Allow Access from Anywhere** (`0.0.0.0/0`).
 4. Click **Confirm**.
-
----
 
 ### 2. Backend Deployment on Render
 1. Log in to [Render Dashboard](https://dashboard.render.com/) and click **New +** > **Web Service**.
@@ -297,9 +363,7 @@ Since cloud providers (Render, AWS) use dynamic outbound IPs:
    - **Live Backend URL**: [https://consentguard-03.onrender.com](https://consentguard-03.onrender.com)
    - **Health Check Endpoint**: [https://consentguard-03.onrender.com/health](https://consentguard-03.onrender.com/health)
 
-*(Note: The repository also contains [`render.yaml`](file:///C:/Users/ok/Hackathon/Consent_Guard1/render.yaml) for 1-click Blueprint deployment).*
-
----
+*(Note: The repository also contains [`render.yaml`](./render.yaml) for 1-click Blueprint deployment).*
 
 ### 3. Frontend Deployment on Vercel
 1. Log in to [Vercel](https://vercel.com/) and click **Add New...** > **Project**.
@@ -312,7 +376,7 @@ Since cloud providers (Render, AWS) use dynamic outbound IPs:
    | :--- | :--- |
    | `NEXT_PUBLIC_API_URL` | `https://consentguard-03.onrender.com` *(Do not add trailing slash)* |
 5. Click **Deploy**.
-   - **Live Frontend URL**: [https://consent-guard-03.vercel.app/](https://consent-guard-03.vercel.app/)
+   - **Live Frontend URL**: [https://consent-guard1.vercel.app/](https://consent-guard1.vercel.app/)
 
 ---
 
@@ -330,12 +394,12 @@ Since cloud providers (Render, AWS) use dynamic outbound IPs:
   ```
 
 ### 2. Consent State
-- **`GET /api/consent/:userId`**: Returns live consent status (`GRANTED`, `WITHDRAWN`, `NONE`), consent versions (`cv`), and outdated flags for all 3 purposes.
+- **`GET /api/consent/:userId`**: Returns live consent status (`GRANTED`, `WITHDRAWN`, `NONE`), consent versions ($cv$), and outdated flags for all 3 purposes.
 - **`POST /api/consent/grant`**: Grants consent for a specified purpose and notice version.
   ```json
   { "userId": "alice", "purposeId": "P1_ANALYTICS", "noticeVersion": 1 }
   ```
-- **`POST /api/consent/withdraw`**: Withdraws consent immediately (increments `cv`, appends to hash chain).
+- **`POST /api/consent/withdraw`**: Withdraws consent immediately (increments $cv$, appends to hash chain).
   ```json
   { "userId": "alice", "purposeId": "P1_ANALYTICS" }
   ```
@@ -414,35 +478,38 @@ Every consent grant or revocation generates an immutable event record:
 | `NO_CONSENT` | 403 | No consent record found for the requested purpose |
 | `CONSENT_WITHDRAWN` | 403 | Consent was revoked by the user |
 | `NOTICE_OUTDATED` | 403 | A material notice revision invalidated the consent version |
-| `TOKEN_STALE` | 403 | Token `cv` does not match live database `cv` (prevents replay post-withdrawal) |
+| `TOKEN_STALE` | 403 | Token $cv$ does not match live database $cv$ (prevents replay post-withdrawal) |
 
 ---
 
 ## 🧪 Automated Lifecycle Test Suite (T01–T20)
 
-ConsentGuard features a full 20-test automated lifecycle suite covering all states, transitions, cryptographic verifications, and cache fallback mechanisms.
+ConsentGuard features a full 20-test automated lifecycle suite (exceeding the requirement of $\ge 12$ tests) covering all states, transitions, cryptographic verifications, and cache fallback mechanisms.
 
 ```bash
 # Run tests from root:
 npm test
 ```
 
+### Required Hackathon Demo Path:
+`Grant (T01) → Data Sharing (T04) → Withdrawal (T06) → Denied Subsequent Request (T07) → Material Notice Change (T11) → Re-Consent (T12) → Audit Verification (T17)`
+
 | ID | Test Scenario | Expected Outcome |
 | :--- | :--- | :--- |
-| **T01** | Grant P1 with notice v1 | `200 GRANTED`, `cv=1`, event stored |
-| **T02** | Independent purpose isolation (P1, P2, P3) | Three distinct states, each with independent `cv=1` |
+| **T01** | Grant P1 with notice v1 | `200 GRANTED`, $cv=1$, event stored |
+| **T02** | Independent purpose isolation (P1, P2, P3) | Three distinct states, each with independent $cv=1$ |
 | **T03** | Grant against stale notice version | Rejected with `409 NOTICE_OUTDATED` |
 | **T04** | Valid token access to PartnerHub P1 | `200 OK`, delivers strictly scoped telemetry data |
 | **T05** | Assertion requested with no consent granted | Rejected with `403 NO_CONSENT` |
-| **T06** | Withdraw consent for P2 | `200 WITHDRAWN`, `cv` increments to 2 |
+| **T06** | Withdraw consent for P2 | `200 WITHDRAWN`, $cv$ increments to 2 |
 | **T07** | Replay old token post-withdrawal | Blocked with `403 TOKEN_STALE` |
 | **T08** | Withdrawal of P2 leaves P1 and P3 unaffected | P1/P3 tokens continue to return `200 OK` |
 | **T09** | Present P1 token to access P2 endpoint | Blocked with `403 PURPOSE_MISMATCH` |
 | **T10** | Present tampered/corrupted JWT signature | Blocked with `401 INVALID_TOKEN` |
 | **T11** | Material notice update published affecting only P3 | P3 blocked with `403 NOTICE_OUTDATED`; P1/P2 unaffected (`200 OK`) |
-| **T12** | Re-consent P3 against notice v2 | `200 GRANTED`, `cv` incremented, v1 history preserved in ledger |
+| **T12** | Re-consent P3 against notice v2 | `200 GRANTED`, $cv$ incremented, v1 history preserved in ledger |
 | **T13** | Non-material typo notice update published | No re-consent required; existing tokens remain `200 OK` |
-| **T14** | Re-grant creates `cv=3`; attempt using `cv=1` token | Blocked with `403 TOKEN_STALE` |
+| **T14** | Re-grant creates $cv=3$; attempt using $cv=1$ token | Blocked with `403 TOKEN_STALE` |
 | **T15** | Idempotent double withdrawal on same purpose | Handled cleanly without corrupting state or hash chain |
 | **T16** | Cross-tenant exploit (Alice token requesting Bob data) | Blocked with `403 SUBJECT_MISMATCH` |
 | **T17** | Full lifecycle audit export and verification | Hash chain verification returns `chainValid: true` |
@@ -452,62 +519,16 @@ npm test
 
 ---
 
+## 👥 Team Members
+
+| Name | Role & Focus | Contact |
+| :--- | :--- | :--- |
+| **Md Samir Khan** | Full-Stack Developer & Backend/Architecture Lead | `md2102172@st.jmi.ac.in` |
+| **Aliza Parvez Yousuf** | Frontend UI/UX, Conceptual Design & Pitch Presenter | `alizaparvez45@gmail.com` |
+
+---
+
 ## 📄 License & Credits
 
-Built for **Hackathon Reference A3-PS002-TC140** | FitNest × PartnerHub Prototype.  
-Licensed under the [ISC License](file:///C:/Users/ok/Hackathon/Consent_Guard1/package.json).
-=======
-[github_project_readme.md](https://github.com/user-attachments/files/33394699/github_project_readme.md)
-# ConsentGuard: Purpose-Based Consent Recording & Withdrawal Prototype
-
-> **AIORI Hackathon 3 | Problem Statement:** PS-002 (Purpose-Based Consent Recording & Withdrawal)  
-> **Team Name:** No means No  
-> **Team Code:** `A3-PS002-TC140`  
-
----
-
-## 🎥 Team Introduction & Pitch Video
-
-Watch our team introduction and solution walkthrough video below:
-* **YouTube Link:** [Watch ConsentGuard Team Introduction & Pitch Video](https://youtu.be/tLF9r6ZWXj8)
-
----
-
-## 📌 Project Overview
-**ConsentGuard** is a purpose-based consent recording and withdrawal prototype built for a synthetic fitness service (*FitNest*). It addresses core privacy gaps in modern applications by ensuring that user consent is strictly tied to specific purposes, policy versions are transparently tracked, and data access is blocked **instantly at request time** rather than waiting for token expiration.
-
-### Core Architecture Highlights:
-- **Granular Purpose Control:** Separate consent toggles for independent data purposes ($P1\_ANALYTICS$, $P2\_PERSONALISATION$, $P3\_RESEARCH\_SHARING$).
-- **Notice Versioning ($nv$):** Tracks exact policy versions seen by the user; triggers incremental re-prompts only when material changes occur.
-- **Instant Revocation via Consent Versioning ($cv$):** Every grant or withdrawal increments a monotonic counter per user-purpose pair, instantly invalidating older signed tokens.
-- **High-Performance Enforcement:** Combines short-lived ES256 JWT assertion tokens with an in-memory cache check, targeting **$< 5\text{ ms}$** authorization latency.
-- **Tamper-Evident Audit Trail:** Append-only, SHA-256 hash-chained event ledgers ensuring any record alteration is mathematically detectable.
-
----
-
-## 🏗️ System Architecture & Tech Stack
-
-ConsentGuard is built on a robust **MERN Stack + Mock Downstream Consumer** architecture:
-1. **Presentation Tier:** Next.js / React (User Consent Portal & Admin Audit Dashboard)
-2. **Application Tier:** Node.js + Express.js REST API (Consent State, Lifecycle Rules, Notice Publishing, Token Issuer)
-3. **Enforcement Tier:** PartnerHub (Mock Downstream API protected by custom `enforceConsent` middleware)
-4. **Persistence Tier:** MongoDB & Mongoose (`consent_state`, `consent_events`, `notices`, `access_logs`)
-
----
-
-## 🧪 Lifecycle Testing Suite
-We have designed and implemented **20 automated Jest & Supertest lifecycle test cases** (well above the requirement of $\ge 12$) running against `mongodb-memory-server`:
-- Verifying successful access grants (200 OK).
-- Validating instant access denial upon withdrawal (403( CONSENT WITHDRAWN)).
-- Catching stale tokens and outdated notice versions (409)
-- Verifying complete SHA-256 hash-chain integrity (`chainValid: true`).
-
----
-
-## 👥 Team Members
-* **Md Samir Khan** — Full-Stack Developer & Backend/Architecture Lead
-* **Aliza Parvez Yousuf** — Frontend, Conceptual Design & Pitch Presenter
-
----
-*Submitted as part of Level 1 & Level 2 requirements for AIORI Hackathon 3.*
->>>>>>> 1403ea3518a2f7bf4d2531d699aec882557b1522
+Submitted as part of Level 1 & Level 2 requirements for **AIORI Hackathon 3** (`A3-PS002-TC140`) | **Team No means No** (FitNest $\times$ PartnerHub Prototype).  
+Licensed under the [ISC License](./package.json).
