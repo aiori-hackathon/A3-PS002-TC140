@@ -9,17 +9,12 @@
 
 ## 🌐 Live Prototype, Videos & Deployment Links
 
-* 🚀 **Live Frontend Web App (Vercel):** [https://consent-guard1.vercel.app/](https://consent-guard1.vercel.app/)
-* 🎬 **Prototype Demonstration Video (YouTube):** [https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA](https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA)
-* 🎥 **Team Introduction & Pitch Video (YouTube):** [https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik](https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik)
-* ⚙️ **Backend API Gateway (Render):** [https://consentguard-03.onrender.com](https://consentguard-03.onrender.com)
-* 🩺 **Backend API Health Check (Render):** [https://consentguard-03.onrender.com/health](https://consentguard-03.onrender.com/health)
-* 💻 **GitHub Source Repository:** [https://github.com/Alizaaa02/ConsentGuard_03](https://github.com/Alizaaa02/ConsentGuard_03)
+
 
 | Service / Resource | Host / Platform | Live Endpoint / URL | Status |
 | :--- | :--- | :--- | :--- |
 | **Frontend Web App** | **Vercel** | [https://consent-guard1.vercel.app/](https://consent-guard1.vercel.app/) | [![Vercel](https://img.shields.io/badge/Vercel-Live-success?logo=vercel)](https://consent-guard1.vercel.app/) |
-| **Prototype Demo Video** | **YouTube** | [https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA](https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA) | [![YouTube](https://img.shields.io/badge/YouTube-Demo_Video-red?logo=youtube)](https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA) |
+| **Prototype Demonstration Video** | **YouTube** | [https://youtube.com/shorts/wLrrWsIwlHI?si=RiWp9NLlZWM8PTZA](https://youtu.be/L522hCqwpAI?si=D7ztpNBJC1Civ_c6) | [![YouTube](https://img.shields.io/badge/YouTube-Demo_Video-red?logo=youtube)](https://youtu.be/L522hCqwpAI?si=D7ztpNBJC1Civ_c6) |
 | **Team Intro & Pitch Video** | **YouTube** | [https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik](https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik) | [![YouTube](https://img.shields.io/badge/YouTube-Team_Pitch-red?logo=youtube)](https://youtu.be/tLF9r6ZWXj8?si=EnfDShG2fWjaE_ik) |
 | **Backend API Gateway** | **Render** | [https://consentguard-03.onrender.com](https://consentguard-03.onrender.com) | [![Render](https://img.shields.io/badge/Render-Online-success?logo=render)](https://consentguard-03.onrender.com/health) |
 | **API Health Check** | **Render** | [https://consentguard-03.onrender.com/health](https://consentguard-03.onrender.com/health) | `{"status":"ok"}` |
